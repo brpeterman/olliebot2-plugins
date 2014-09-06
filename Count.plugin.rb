@@ -11,8 +11,8 @@ module Count
       from = e.nick
       msg = e.params[1]
       if (to == @bot.nick and msg == '!count') then
-        @bot.connection.notice from, "Stored messages: "+(bot.messages.length+1).to_s
-        @bot.connection.notice from, "Stored actions: "+(bot.actions.length+1).to_s
+        @bot.connection.notice from, "Stored messages: "+(@bot.messages.length+1).to_s
+        @bot.connection.notice from, "Stored actions: "+(@bot.actions.length+1).to_s
       end
     end
   end

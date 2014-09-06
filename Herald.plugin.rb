@@ -9,6 +9,13 @@ module Herald
       @bot.class.class_eval {
         attr_accessor :messages, :actions, :last_msg, :msg_logger, :act_logger
       }
+      begin
+        File.open('msg_log.json', 'r') {|f| @bot.messages = JSON.load(f.read)}
+        File.open('act_log.json', 'r') {|f| @bot.actions = JSON.load(f.read)}
+      rescue Errno::ENOENT => e
+        $stderr.puts "Failed to load message log(s):"
+        $stderr.puts e.inspect
+      end
     end
     
     def handle_privmsg(e)
@@ -100,16 +107,6 @@ module Herald
             bot.suppressor[:herald] = false
           end
         end
-      end
-    end
-    
-    def handle_endofmotd(e)
-      begin
-        File.open('msg_log.json', 'r') {|f| @bot.messages = JSON.load(f.readlines.to_s)}
-        File.open('act_log.json', 'r') {|f| @bot.actions = JSON.load(f.readlines.to_s)}
-      rescue Errno::ENOENT => e
-        $stderr.puts "Failed to load message log(s):"
-        $stderr.puts e.inspect
       end
     end
   end
