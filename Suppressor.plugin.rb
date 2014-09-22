@@ -10,5 +10,25 @@ module Suppressor
       }
       bot.suppressor = {}
     end
+    
+    def suppressed(flag)
+      if @bot.suppressor[flag] then
+        true
+      else
+        false
+      end
+    end
+    
+    def suppress(*flags)
+      flags.each do |flag|
+        @bot.suppressor[flag] = true
+      end
+    end
+    
+    def unsuppress(*flags)
+      flags.each do |flag|
+        @bot.suppressor[flag] = nil
+      end
+    end
   end
 end

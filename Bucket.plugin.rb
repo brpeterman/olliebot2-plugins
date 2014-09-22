@@ -10,16 +10,19 @@ module Bucket
     end
     
     def handle_ctcp_action(e)
+      if @bot.plugin_loaded? IgnoreList then 
+        return if @bot.call_on_plugin(IgnoreList, :ignored, e.nick)
+      end
       to = e.params[0]
       if (to != @bot.nick) then
         msg = e.params[1]
         from = e.nick
         if (msg =~ /^gives #{@bot.nick} (.+)[\.\?\!]?/i) then
-          @bot.suppressor[:herald] = true
+          @bot.call_on_plugin(Suppressor, :suppress, :herald)
           item = $1
           if (!@bot.bucket) then
             begin
-              File.open("bucket.txt") {|f| @bot.bucket = f.readlines.to_s}
+              File.open("bucket.txt") {|f| @bot.bucket = f.read}
             rescue Errno::ENOENT
               @bot.bucket = "a fish"
             end

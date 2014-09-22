@@ -8,6 +8,10 @@ module Greetings
     end
   
     def handle_privmsg(e)
+      if @bot.plugin_loaded? IgnoreList then 
+        return if @bot.call_on_plugin(IgnoreList, :ignored, e.nick)
+      end
+      
       to = e.params[0]
       msg = e.params[1]
       from = e.nick
@@ -15,12 +19,13 @@ module Greetings
       if (to == @bot.nick) then
         dest = from
       end
+      
       if (msg =~ /\bwho are you\b/i) then
-        @bot.suppressor[:herald] = true
+        @bot.call_on_plugin(Suppressor, :suppress, :herald)
         sleep 1
         @bot.connection.privmsg dest, "I'm "+@bot.nick+"!"
       elsif (msg =~ /\bwhere are you\b/i) then
-        @bot.suppressor[:herald] = true
+        @bot.call_on_plugin(Suppressor, :suppress, :herald)
         sleep 1
         line = "I'm in "
         if (@bot.chans.length == 1) then
@@ -34,8 +39,8 @@ module Greetings
           line += "and "+@bot.chans[@bot.chans.length-1]
         end
         @bot.connection.privmsg dest, line
-      elsif (msg =~ /(hi|hello|hey|sup),? (#{@bot.nick}|ollie)/i and from != "Heraldbot" and from != "superluffly") then
-              @bot.suppressor[:herald] = true
+      elsif (msg =~ /(hi|hello|hey|sup),? (#{@bot.nick}|ollie)/i and !(from =~ /\AHeraldBot\Z/i) and !(from =~ /\Asuperluffly\Z/i)) then
+        @bot.call_on_plugin(Suppressor, :suppress, :herald)
         sleep 1
         @bot.connection.privmsg dest, "Hi "+from
       end

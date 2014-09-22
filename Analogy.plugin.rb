@@ -10,11 +10,14 @@ module Analogy
     end
     
     def handle_privmsg(e)
+      if @bot.plugin_loaded? IgnoreList then 
+        return if @bot.call_on_plugin(IgnoreList, :ignored, e.nick)
+      end
       if (e.params[1] =~ /(.+) is to (.+) as(\.+|:)/) then
         http = Net::HTTP.new("www.google.com")
         query = CGI::escape($1 + " is to " + $2 + " as * is to *")
         resp = http.get("/search?q=\""+query+"\"")
-        if (resp.body =~ /<em>#{$1} is to #{$2} as (.+?)</i) then
+        if (resp.body =~ /<em>#{$1} is to #{$2} as (.+?)[\.\?\!,<]/i) then
           half = $1.gsub(/<\/?em>/, "")
           @bot.connection.privmsg(e.params[0], half)
         else

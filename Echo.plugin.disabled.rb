@@ -7,7 +7,9 @@ module Echo
     end
     
     def handle_privmsg(event)
-      #$stderr.puts event
+      if @bot.plugin_loaded? IgnoreList then 
+        return if @bot.call_on_plugin(IgnoreList, :ignored, e.nick)
+      end
       to = event.params[0]
       dest = to
       if to == @bot.nick then

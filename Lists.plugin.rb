@@ -22,15 +22,15 @@ module Lists
     end
     
     def handle_privmsg(e)
+      if @bot.plugin_loaded? IgnoreList then 
+        return if @bot.call_on_plugin(IgnoreList, :ignored, e.nick)
+      end
       to = e.params[0]
       if (!(to == @bot.nick)) then
         msg = e.params[1]
+        # Append to list
         if (msg =~ /\A#{@bot.nick}[,:] add (.+?) to (.+)\.?\Z/i) then
-          @bot.suppressor[:herald] = true
-          @bot.suppressor[:trigger] = true
-          @bot.suppressor[:s] = true
-          @bot.suppressor[:outburst] = true
-          @bot.suppressor[:decider] = true
+          @bot.call_on_plugin(Suppressor, :suppress, :herald, :trigger, :s, :outburst, :decider)
           obj = $1.downcase
           list = $2.downcase
           if (list[list.length-1] == "."[0]) then
@@ -44,12 +44,10 @@ module Lists
             File.open('lists.json', 'w') {|f| f.write(JSON.dump(@bot.lists))}
             @bot.connection.privmsg to, "#{obj} added to #{list}"
           end
+          
+        # Remove from list
         elsif (msg =~ /\A#{@bot.nick}[,:] remove (.+?) from (.+)\.?\Z/i) then
-          @bot.suppressor[:herald] = true
-          @bot.suppressor[:trigger] = true
-          @bot.suppressor[:s] = true
-          @bot.suppressor[:outburst] = true
-          @bot.suppressor[:decider] = true
+          @bot.call_on_plugin(Suppressor, :suppress, :herald, :trigger, :s, :outburst, :decider)
           obj = $1.downcase
           list = $2.downcase
           if (list[list.length-1] == "."[0]) then
@@ -63,12 +61,10 @@ module Lists
             File.open('lists.json', 'w') {|f| f.write(JSON.dump(@bot.lists))}
             @bot.connection.privmsg to, "#{obj} removed from #{list}"
           end
+          
+        # Spit out a list
         elsif (msg =~ /\A#{@bot.nick}[,:] (tell|show) me (.+)\.?\Z/i) then
-          @bot.suppressor[:herald] = true
-          @bot.suppressor[:trigger] = true
-          @bot.suppressor[:s] = true
-          @bot.suppressor[:outburst] = true
-          @bot.suppressor[:decider] = true
+          @bot.call_on_plugin(Suppressor, :suppress, :herald, :trigger, :s, :outburst, :decider)
           list = $2.downcase
           if (list[list.length-1] == "."[0]) then
             list = list[0..list.length-2]
@@ -84,6 +80,8 @@ module Lists
               @bot.connection.privmsg to, i
             }
           end
+        
+        # Learn what is
         elsif (msg =~ /([^ ]+) is ([^.,?!]+)/i) then
           nick = $1.downcase
           desc = $2.downcase
@@ -93,26 +91,26 @@ module Lists
           @bot.barrier[to] = true
           start = Time.now.to_i
           @bot.connection.names(to)
-          while (@bot.barrier[to] and (Time.now.to_i - start < 10)) do end
-          if (@bot.names[to]) then
-            user = nil
-            @bot.names[to].each{|n| user = true if(n.downcase == nick)}
-            if (user) then
-              @bot.suppressor[:herald] = true
-              @bot.suppressor[:trigger] = true
-              @bot.suppressor[:s] = true
-              @bot.suppressor[:outburst] = true
-              @bot.suppressor[:decider] = true
-              if (!@bot.properties) then
-                @bot.properties = {}
+          Thread.start do
+            while (@bot.barrier[to] and (Time.now.to_i - start < 10)) do end
+            if (@bot.names[to]) then
+              user = nil
+              @bot.names[to].each{|n| user = true if(n.downcase == nick)}
+              if (user) then
+                @bot.call_on_plugin(Suppressor, :suppress, :herald, :trigger, :s, :outburst, :decider)
+                if (!@bot.properties) then
+                  @bot.properties = {}
+                end
+                if (!@bot.properties[nick]) then
+                  @bot.properties[nick] = []
+                end
+                @bot.properties[nick] << desc if(!@bot.properties[nick].include? desc)
+                File.open("properties.json", "w"){|f| f.write(JSON.dump(@bot.properties))}
               end
-              if (!@bot.properties[nick]) then
-                @bot.properties[nick] = []
-              end
-              @bot.properties[nick] << desc if(!@bot.properties[nick].include? desc)
-              File.open("properties.json", "w"){|f| f.write(JSON.dump(@bot.properties))}
             end
           end
+          
+        # Learn what is not
         elsif (msg =~ /([^ ]+) isn't ([^.,?!]+)/i) then
           nick = $1.downcase
           desc = $2.downcase
@@ -122,34 +120,30 @@ module Lists
           @bot.barrier[to] = true
           start = Time.now.to_i
           @bot.connection.names(to)
-          while (@bot.barrier[to] and (Time.now.to_i - start < 10)) do end
-          if (@bot.names[to]) then
-            user = nil
-            @bot.names[to].each{|n| user = true if(n.downcase == nick)}
-            if (user) then
-              @bot.suppressor[:herald] = true
-              @bot.suppressor[:trigger] = true
-              @bot.suppressor[:s] = true
-              @bot.suppressor[:outburst] = true
-              @bot.suppressor[:decider] = true
-              if (!@bot.properties) then
-                @bot.properties = {}
+          Thread.start do
+            while (@bot.barrier[to] and (Time.now.to_i - start < 10)) do end
+            if (@bot.names[to]) then
+              user = nil
+              @bot.names[to].each{|n| user = true if(n.downcase == nick)}
+              if (user) then
+                @bot.call_on_plugin(Suppressor, :suppress, :herald, :trigger, :s, :outburst, :decider)
+                if (!@bot.properties) then
+                  @bot.properties = {}
+                end
+                if (!@bot.properties[nick]) then
+                  @bot.properties[nick] = []
+                end
+                @bot.properties[nick].delete(desc)
+                File.open("properties.json", "w"){|f| f.write(JSON.dump(@bot.properties))}
               end
-              if (!@bot.properties[nick]) then
-                @bot.properties[nick] = []
-              end
-              @bot.properties[nick].delete(desc)
-              File.open("properties.json", "w"){|f| f.write(JSON.dump(@bot.properties))}
             end
           end
-      elsif (msg =~ /\Atell me( all)? about ([^ .]+)\Z/i) then
-        nick = $2.downcase
-        @bot.suppressor[:herald] = true
-        @bot.suppressor[:trigger] = true
-        @bot.suppressor[:s] = true
-        @bot.suppressor[:outburst] = true
-        @bot.suppressor[:decider] = true
-          if (@bot.properties[nick].length > 5 and $1 == nil) then
+      
+        # User dossiers
+        elsif (msg =~ /\Atell me( all)? about ([^ .]+)\Z/i) then
+          nick = $2.downcase
+          @bot.call_on_plugin(Suppressor, :suppress, :herald, :trigger, :s, :outburst, :decider)
+          if (@bot.properties[nick] and @bot.properties[nick].length > 5 and $1 == nil) then
             chosen = []
             while (chosen.length < 5) do
               prop = @bot.properties[nick][rand(@bot.properties[nick].length)];
@@ -169,20 +163,23 @@ module Lists
               }
             end
           end
+          
+        # Keep track of how awesome everyone is
         elsif msg =~ /^!(.+?)(\+\+|--)?$/
           subject = $1.downcase
           change = $2
           @bot.score = {} if !@bot.score
           @bot.score[subject] = 0 if !@bot.score[subject]
           case change
-          when "++"
-            @bot.score[subject] += 1
-            File.open("scores.json", "w"){|f| f.write(JSON.dump(@bot.score))}
-          when "--"
-            @bot.score[subject] -= 1
-            File.open("scores.json", "w"){|f| f.write(JSON.dump(@bot.score))}
+            when "++"
+              @bot.score[subject] += 1
+              File.open("scores.json", "w"){|f| f.write(JSON.dump(@bot.score))}
+            when "--"
+              @bot.score[subject] -= 1
+              File.open("scores.json", "w"){|f| f.write(JSON.dump(@bot.score))}
           end
           @bot.connection.privmsg to, subject + ": " + @bot.score[subject].to_s
+          @bot.call_on_plugin(Suppressor, :suppress, :herald)
         end
       end
     end

@@ -8,6 +8,9 @@ module ICanHas
     end
     
     def handle_privmsg(e)
+      if @bot.plugin_loaded? IgnoreList then 
+        return if @bot.call_on_plugin(IgnoreList, :ignored, e.nick)
+      end
       msg = e.params[1]
       chan = e.params[0]
       from = e.nick
